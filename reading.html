@@ -1,0 +1,412 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><title>Eduardo's Reading Tracker</title></head><body>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: companion to the study tracker. Summary bars per book, the shelf, then phases of collapsible week cards with the current week open. */
+:root {
+  --bg: #f3f5f7;
+  --surface: #ffffff;
+  --fg: #17212b;
+  --muted: #5b6875;
+  --line: #d9e0e6;
+  --accent: #1f6f8b;
+  --good: #2f7d4f;
+  --chip: #e8edf1;
+  --b-trenches: #9a5b13;
+  --b-handbook: #3d5fa8;
+  --b-pki: #2f7d4f;
+  --b-audit: #a33d3d;
+  --b-smart: #6b4fa0;
+  --b-focus: #0f7a7a;
+  --b-ei: #a1477a;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11171d; --surface: #18212a; --fg: #e6ecf1; --muted: #98a6b3; --line: #2a3640;
+    --accent: #5fb3d1; --good: #5cc285; --chip: #22303b;
+    --b-trenches: #e0a35a; --b-handbook: #85a6ee; --b-pki: #5cc285; --b-audit: #ef8a8a;
+    --b-smart: #b49ae6; --b-focus: #4fc9c9; --b-ei: #e68cbd;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11171d; --surface: #18212a; --fg: #e6ecf1; --muted: #98a6b3; --line: #2a3640;
+  --accent: #5fb3d1; --good: #5cc285; --chip: #22303b;
+  --b-trenches: #e0a35a; --b-handbook: #85a6ee; --b-pki: #5cc285; --b-audit: #ef8a8a;
+  --b-smart: #b49ae6; --b-focus: #4fc9c9; --b-ei: #e68cbd;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+h1 { font-size: 2.1rem; font-weight: 700; letter-spacing: -0.01em; }
+.sub { color: var(--muted); margin: 6px 0 0; max-width: 62ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 16px; }
+.overall { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.overall .big { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; }
+.tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.track { display: grid; gap: 6px; min-width: 0; }
+.track-head { display: flex; justify-content: space-between; gap: 8px; font-size: 0.88rem; }
+.track-head b { font-weight: 600; min-width: 0; }
+.bar { height: 8px; background: var(--chip); border-radius: 99px; overflow: hidden; }
+.bar > span { display: block; height: 100%; width: 0; border-radius: 99px; transition: width .3s ease; }
+.sync { font-size: 0.8rem; color: var(--muted); }
+
+.shelf { display: grid; gap: 10px; }
+.shelf h2, .howto h2 { font-size: 1.1rem; font-weight: 600; }
+.books { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.books li { display: grid; grid-template-columns: 6px 1fr auto; gap: 14px; padding: 12px 16px; border-top: 1px solid var(--line); align-items: start; }
+.books li:first-child { border-top: 0; }
+.books .sw { width: 6px; align-self: stretch; border-radius: 3px; }
+.books .bk { min-width: 0; }
+.books .bt { font-weight: 600; }
+.books .ba { color: var(--muted); font-size: 0.88rem; }
+.books .why { font-size: 0.88rem; margin-top: 2px; }
+.books .when { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); white-space: nowrap; text-align: right; }
+
+.phase { display: grid; gap: 10px; }
+.phase-head { display: grid; gap: 4px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.phase-head h2 { font-size: 1.35rem; font-weight: 600; }
+.phase-head p { margin: 0; color: var(--muted); font-size: 0.92rem; max-width: 70ch; }
+
+details.week { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+details.week.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+summary::-webkit-details-marker { display: none; }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+.wk-num { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); width: 3.2em; }
+.wk-title { min-width: 0; }
+.wk-title h3 { font-size: 1.05rem; font-weight: 600; }
+.wk-title .dates { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+.wk-right { display: flex; align-items: center; gap: 10px; }
+.pill { font-family: var(--font-mono); font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+.pill.now { background: var(--accent); color: var(--surface); }
+.pill.done { background: var(--good); color: var(--surface); }
+.chev { width: 10px; height: 10px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .2s; margin-top: -4px; }
+details[open] .chev { transform: rotate(-135deg); margin-top: 4px; }
+
+.items { list-style: none; margin: 0; padding: 0 16px 14px; display: grid; gap: 2px; }
+.items li label { display: grid; grid-template-columns: 20px auto 1fr; gap: 10px; align-items: start; padding: 8px 6px; border-radius: 6px; cursor: pointer; }
+.items li label:hover { background: var(--chip); }
+.items input { width: 17px; height: 17px; margin: 2px 0 0; accent-color: var(--accent); }
+.tag { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; border: 1px solid currentColor; white-space: nowrap; margin-top: 1px; }
+.txt { min-width: 0; }
+.checked .txt { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+.wk-note { margin: 0 16px 14px; padding: 10px 12px; border-left: 3px solid var(--line); color: var(--muted); font-size: 0.88rem; }
+.pause { background: var(--surface); border: 1px dashed var(--line); border-radius: 10px; padding: 14px 16px; color: var(--muted); font-size: 0.92rem; }
+
+.howto { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.howto h2 { margin-bottom: 8px; }
+.howto ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 70ch; }
+@media (max-width: 520px) {
+  summary { grid-template-columns: 1fr auto; }
+  .wk-num { display: none; }
+  .items li label { grid-template-columns: 20px 1fr; }
+  .items li label .tag { grid-column: 2; justify-self: start; }
+  .items li label .txt { grid-column: 2; }
+  .books li { grid-template-columns: 6px 1fr; }
+  .books .when { grid-column: 2; text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Oct 12, 2026 → Apr 4, 2027 · 7 books</div>
+    <h1>Eduardo's Reading Tracker</h1>
+    <p class="sub">Runs alongside the study tracker. Leadership books fill the busy weeks, and the technical books land in the same weeks as the CISSP domains they reinforce. February is left clear for exam prep.</p>
+    <p class="sub"><a href="study.html" style="color:var(--accent)">Study tracker &rarr;</a></p>
+  </header>
+
+  <section class="summary" aria-label="Progress">
+    <div class="overall">
+      <div><div class="eyebrow">Overall</div><div class="big mono" id="overallPct">0%</div></div>
+      <div class="mono" id="overallCount" style="color:var(--muted)">0 of 0 tasks</div>
+    </div>
+    <div class="bar"><span id="overallBar" style="background:var(--accent)"></span></div>
+    <div class="tracks" id="tracks"></div>
+    <div class="sync" id="sync">Loading saved progress…</div>
+  </section>
+
+  <section class="shelf" aria-label="The shelf">
+    <h2>The shelf, in reading order</h2>
+    <ul class="books" id="books"></ul>
+  </section>
+
+  <section class="howto" aria-label="Weekly rhythm">
+    <h2>Weekly rhythm</h2>
+    <ul>
+      <li><b>Leadership books:</b> 20–30 minutes on 4–5 evenings a week. Audiobooks count, and they fit drives to the lake.</li>
+      <li><b>Technical books:</b> read on weeknights, do the hands-on part in your Windows Server lab on the weekend.</li>
+      <li><b>Notes:</b> one page per book in the Leuchtturm. Three takeaways and one thing you'll actually do.</li>
+      <li><b>Speaking tie-in:</b> when you finish a book, record a 3-minute summary. It doubles as Commanding Presence practice and gives you interview stories.</li>
+      <li><b>Behind?</b> Skip ahead rather than stall. The handbook and the audit manual are reference books, so skimming chapters you know is fine.</li>
+    </ul>
+  </section>
+
+  <div id="plan" style="display:grid;gap:28px"></div>
+</div>
+
+<script>
+const TRACKS = {
+  trenches: { name: "Truth from the Trenches", short: "Trenches", color: "var(--b-trenches)" },
+  smart:    { name: "Smartest Person in the Room", short: "Smartest Person", color: "var(--b-smart)" },
+  pki:      { name: "PKI with Windows Server", short: "PKI", color: "var(--b-pki)" },
+  focus:    { name: "Focus", short: "Focus", color: "var(--b-focus)" },
+  audit:    { name: "IT Audit Field Manual", short: "IT Audit", color: "var(--b-audit)" },
+  ei:       { name: "Emotional Intelligence", short: "Emotional Intel.", color: "var(--b-ei)" },
+  handbook: { name: "IT Manager's Handbook", short: "IT Mgr Handbook", color: "var(--b-handbook)" },
+};
+
+const BOOKS = [
+  ["trenches", "Truth from the Trenches", "Mark Settle", "Oct 12 – Nov 8", "A six-time CIO on budgets, peers, talent and vendors. Light enough for the busy course weeks, and useful material for leadership interviews."],
+  ["smart", "The Smartest Person in the Room", "Christian Espinosa", "Nov 2 – Nov 29", "Soft skills for technical people, from a cybersecurity CEO. Pairs with the public speaking course."],
+  ["pki", "Practical Guide to PKI with Windows Server", "Matthew Burr", "Nov 23 – Dec 20", "Hands-on two-tier CA build with AD CS. Lands on CISSP Domain 3 cryptography week."],
+  ["focus", "Focus", "Daniel Goleman", "Dec 21 – Jan 24", "Attention as a leadership skill. Light holiday reading that carries into the heavy CISSP weeks."],
+  ["audit", "IT Audit Field Manual", "Lewis Heuermann", "Dec 28 – Jan 31", "Audit planning, device and cloud audits, reporting. Lines up with CISSP Domain 6, Security Assessment and Testing."],
+  ["ei", "Emotional Intelligence", "Daniel Goleman", "Mar 1 – Mar 21", "The original EI book. Read after the exam, when there's room to think about it."],
+  ["handbook", "IT Manager's Handbook", "Bill Holtsnider & Brian Jaffe", "Mar 15 – Apr 4", "Practical reference on staffing, budgets, vendors and projects. Last, so you can read it with a new role in mind."],
+];
+
+const PHASES = [
+  { title: "Phase 1 · Light reading during quick wins", blurb: "You're finishing Claude Associate and ThreatLocker these weeks, so the reading is one easy leadership book.", weeks: [
+    { start: "2026-10-12", title: "Truth from the Trenches: start", items: [
+      ["trenches", "Preface, prologue (leadership vs. management) and \"Follow the Money\""],
+      ["trenches", "Start your one-page notes: how you'd explain IT spend at your next company"],
+    ]},
+    { start: "2026-10-19", title: "Truth from the Trenches: people", items: [
+      ["trenches", "\"Get Them to Like You\" and \"Fishing in the Talent Pool\""],
+      ["trenches", "Write down one story from your own career that matches each chapter (interview prep)"],
+    ]},
+    { start: "2026-10-26", title: "Truth from the Trenches: vendors and onward", items: [
+      ["trenches", "\"Playing Nicely with the Vendors\" and the next two chapters"],
+      ["trenches", "Note anything that applies to the GMA policy or IT timeline work"],
+    ]},
+    { start: "2026-11-02", title: "Finish Trenches, start Smartest Person", items: [
+      ["trenches", "Finish the remaining chapters"],
+      ["trenches", "Record a 3-minute summary: the three lessons you'd bring to a new IT leadership role"],
+      ["smart", "Read the introduction and Christian's background"],
+    ]},
+  ]},
+  { title: "Phase 2 · Reading that reinforces the CISSP domains", blurb: "Technical books land in the same weeks as their CISSP domain. Leadership books stay light so they don't compete with study time.", weeks: [
+    { start: "2026-11-09", title: "Smartest Person: why IQ isn't enough", items: [
+      ["smart", "Read the first third of the book"],
+      ["smart", "Notes: where you've seen \"smartest person\" behavior on IT teams, including your own"],
+    ]},
+    { start: "2026-11-16", title: "Smartest Person: the seven steps", items: [
+      ["smart", "Read the first half of the seven-step method"],
+      ["smart", "Pick one step to practice in this week's speaking recording"],
+    ]},
+    { start: "2026-11-23", title: "Finish Smartest Person, plan the PKI lab (light week)", items: [
+      ["smart", "Finish the book"],
+      ["smart", "Record a 3-minute summary aimed at a team of engineers"],
+      ["pki", "Skim the book's introduction and layout; sketch your lab design (offline root, enterprise issuing CA)"],
+    ], note: "Thanksgiving week. If time is short, push the PKI sketch to next week." },
+    { start: "2026-11-30", title: "PKI: offline root CA", items: [
+      ["pki", "Read the PKI concepts and offline root CA chapters"],
+      ["pki", "Lab: build the standalone offline root CA VM in your Windows Server lab"],
+      ["pki", "Tie-in: use what you built in this week's \"explain PKI without jargon\" recording"],
+    ], note: "Same week as CISSP Domain 3 part 1 (cryptography and PKI)." },
+    { start: "2026-12-07", title: "PKI: enterprise issuing CA", items: [
+      ["pki", "Read the enterprise CA chapters (AIA, CDP, templates)"],
+      ["pki", "Lab: stand up the enterprise subordinate CA joined to your AD domain"],
+      ["pki", "Publish the root cert and CRL; confirm clients trust the chain"],
+    ]},
+    { start: "2026-12-14", title: "PKI: OCSP and wrap-up", items: [
+      ["pki", "Read the OCSP chapter"],
+      ["pki", "Lab: configure OCSP and issue a test certificate from a template"],
+      ["pki", "Write a one-page lab summary with screenshots for your portfolio"],
+    ]},
+    { start: "2026-12-21", title: "Focus: start (holidays)", items: [
+      ["focus", "Read Part I, the anatomy of attention"],
+    ], note: "Holiday week. One light read only, matching the CISSP review week." },
+    { start: "2026-12-28", title: "Focus continues, IT Audit begins", items: [
+      ["focus", "Read the parts on self-awareness and reading others"],
+      ["audit", "Chapters 1–2: introduction to IT auditing, audit planning and preparation"],
+    ]},
+    { start: "2027-01-04", title: "IT Audit: network and cloud", items: [
+      ["audit", "Chapters 3–5: Cisco devices, next-gen firewalls, cloud security auditing"],
+      ["focus", "Continue Focus (about 40 pages)"],
+    ], note: "Same week as CISSP Domain 6 (Security Assessment and Testing)." },
+    { start: "2027-01-11", title: "IT Audit: endpoints", items: [
+      ["audit", "Chapter 6: Windows 10/11 endpoint security"],
+      ["audit", "Lab: audit one workstation and your domain controller using the chapter's checks"],
+      ["audit", "Chapter 7 (Linux): skim"],
+      ["focus", "Continue Focus"],
+    ]},
+    { start: "2027-01-18", title: "IT Audit: data and privacy", items: [
+      ["audit", "Chapters 8–9: wireless and storage, data protection and privacy"],
+      ["focus", "Finish Focus, including the well-focused leader section"],
+      ["focus", "Record a 3-minute summary: how you protect your own focus as an IT leader"],
+    ]},
+    { start: "2027-01-25", title: "IT Audit: reporting and finish", items: [
+      ["audit", "Chapters 10–12 and the conclusion: reporting, remediation, advanced topics, audit careers"],
+      ["audit", "Write a short audit report of your lab findings, using Chapter 10's format"],
+    ]},
+  ]},
+  { title: "Phase 3 · Reading paused for the CISSP exam", blurb: "", pause: "Feb 1 – Feb 28. No assigned reading while you take practice exams and sit the CISSP. If you want something, an audiobook of a book you've already finished is fine.", weeks: [] },
+  { title: "Phase 4 · After the exam", blurb: "The two books that pay off most once you're in or heading into a new role.", weeks: [
+    { start: "2027-03-01", title: "Emotional Intelligence: the foundations", items: [
+      ["ei", "Read Parts One and Two (the emotional brain, the nature of emotional intelligence)"],
+      ["ei", "Notes: one situation at work where an emotional hijack cost you or someone else"],
+    ]},
+    { start: "2027-03-08", title: "Emotional Intelligence: applied", items: [
+      ["ei", "Read Part Three, including the chapter on managing with heart"],
+      ["ei", "Compare it to Smartest Person: what both books say about leading technical people"],
+    ]},
+    { start: "2027-03-15", title: "Finish EI, start the Handbook", items: [
+      ["ei", "Read Parts Four and Five"],
+      ["ei", "Record a 3-minute summary: what EI looks like during an outage"],
+      ["handbook", "Read the opening chapters on the IT manager role and staffing your team"],
+    ]},
+    { start: "2027-03-22", title: "Handbook: money and vendors", items: [
+      ["handbook", "Read the budgeting and vendor management chapters"],
+      ["handbook", "Compare with Truth from the Trenches; note where they agree and differ"],
+    ]},
+    { start: "2027-03-29", title: "Handbook: projects and finish", items: [
+      ["handbook", "Read the project management and security/compliance chapters; skim the rest"],
+      ["handbook", "Capstone: write one page on your IT leadership approach, drawing on all seven books"],
+    ]},
+  ]},
+];
+
+let wkNo = 0;
+const ALL = [];
+for (const ph of PHASES) for (const w of ph.weeks) {
+  w.no = ++wkNo;
+  w.items = w.items.map((it, i) => ({ id: `w${w.no}-${i}`, track: it[0], text: it[1] }));
+  ALL.push(...w.items);
+}
+
+let done = {};
+let ref = null;
+
+function fmt(d) { return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
+function weekRange(start) {
+  const s = new Date(start + "T00:00:00"); const e = new Date(s); e.setDate(s.getDate() + 6);
+  return `${fmt(s)} – ${fmt(e)}`;
+}
+function isCurrent(start) {
+  const s = new Date(start + "T00:00:00"); const e = new Date(s); e.setDate(s.getDate() + 7);
+  const now = new Date(); return now >= s && now < e;
+}
+
+function renderBooks() {
+  const ul = document.getElementById("books");
+  for (const [k, title, author, when, why] of BOOKS) {
+    const li = document.createElement("li");
+    const sw = document.createElement("span"); sw.className = "sw"; sw.style.background = TRACKS[k].color;
+    const bk = document.createElement("div"); bk.className = "bk";
+    const bt = document.createElement("div"); bt.className = "bt"; bt.textContent = title;
+    const ba = document.createElement("div"); ba.className = "ba"; ba.textContent = author;
+    const wy = document.createElement("div"); wy.className = "why"; wy.textContent = why;
+    bk.append(bt, ba, wy);
+    const wh = document.createElement("div"); wh.className = "when"; wh.textContent = when;
+    li.append(sw, bk, wh); ul.append(li);
+  }
+}
+
+function render() {
+  const plan = document.getElementById("plan");
+  const openIds = new Set([...plan.querySelectorAll("details[open]")].map(d => d.id));
+  const first = !plan.children.length;
+  plan.innerHTML = "";
+  let anyCurrent = false;
+  for (const ph of PHASES) {
+    const sec = document.createElement("section"); sec.className = "phase";
+    const head = document.createElement("div"); head.className = "phase-head";
+    const h2 = document.createElement("h2"); h2.textContent = ph.title; head.append(h2);
+    if (ph.blurb) { const p = document.createElement("p"); p.textContent = ph.blurb; head.append(p); }
+    sec.append(head);
+    if (ph.pause) { const pz = document.createElement("div"); pz.className = "pause"; pz.textContent = ph.pause; sec.append(pz); }
+    for (const w of ph.weeks) {
+      const d = document.createElement("details"); d.className = "week"; d.id = "wk" + w.no;
+      const cur = isCurrent(w.start); if (cur) { d.classList.add("current"); anyCurrent = true; }
+      const nDone = w.items.filter(i => done[i.id]).length;
+      if (first ? cur : openIds.has(d.id)) d.open = true;
+      const s = document.createElement("summary");
+      const num = document.createElement("div"); num.className = "wk-num"; num.textContent = "WK " + String(w.no).padStart(2, "0");
+      const t = document.createElement("div"); t.className = "wk-title";
+      const h3 = document.createElement("h3"); h3.textContent = w.title;
+      const dt = document.createElement("div"); dt.className = "dates"; dt.textContent = weekRange(w.start);
+      t.append(h3, dt);
+      const r = document.createElement("div"); r.className = "wk-right";
+      const pill = document.createElement("span"); pill.className = "pill";
+      if (nDone === w.items.length) { pill.classList.add("done"); pill.textContent = "Done"; }
+      else if (cur) { pill.classList.add("now"); pill.textContent = `This week · ${nDone}/${w.items.length}`; }
+      else pill.textContent = `${nDone}/${w.items.length}`;
+      const ch = document.createElement("span"); ch.className = "chev";
+      r.append(pill, ch); s.append(num, t, r); d.append(s);
+      const ul = document.createElement("ul"); ul.className = "items";
+      for (const it of w.items) {
+        const li = document.createElement("li"); if (done[it.id]) li.className = "checked";
+        const lab = document.createElement("label");
+        const cb = document.createElement("input"); cb.type = "checkbox"; cb.id = it.id; cb.checked = !!done[it.id];
+        cb.addEventListener("change", () => toggle(it.id, cb.checked));
+        const tag = document.createElement("span"); tag.className = "tag"; tag.style.color = TRACKS[it.track].color; tag.textContent = TRACKS[it.track].short;
+        const tx = document.createElement("span"); tx.className = "txt"; tx.textContent = it.text;
+        lab.append(cb, tag, tx); li.append(lab); ul.append(li);
+      }
+      d.append(ul);
+      if (w.note) { const n = document.createElement("p"); n.className = "wk-note"; n.textContent = w.note; d.append(n); }
+      sec.append(d);
+    }
+    plan.append(sec);
+  }
+  if (first && !anyCurrent) { const f = document.getElementById("wk1"); if (f) f.open = true; }
+  renderSummary();
+}
+
+function renderSummary() {
+  const total = ALL.length, n = ALL.filter(i => done[i.id]).length;
+  const pct = total ? Math.round(n / total * 100) : 0;
+  document.getElementById("overallPct").textContent = pct + "%";
+  document.getElementById("overallCount").textContent = `${n} of ${total} tasks`;
+  document.getElementById("overallBar").style.width = pct + "%";
+  const box = document.getElementById("tracks"); box.innerHTML = "";
+  for (const [k, t] of Object.entries(TRACKS)) {
+    const items = ALL.filter(i => i.track === k); const c = items.filter(i => done[i.id]).length;
+    const p = items.length ? Math.round(c / items.length * 100) : 0;
+    const el = document.createElement("div"); el.className = "track";
+    const h = document.createElement("div"); h.className = "track-head";
+    const b = document.createElement("b"); b.textContent = t.name; b.style.color = t.color;
+    const m = document.createElement("span"); m.className = "mono"; m.textContent = `${c}/${items.length}`;
+    h.append(b, m);
+    const bar = document.createElement("div"); bar.className = "bar";
+    const sp = document.createElement("span"); sp.style.width = p + "%"; sp.style.background = t.color;
+    bar.append(sp); el.append(h, bar); box.append(el);
+  }
+}
+
+function setSync(msg) { document.getElementById("sync").textContent = msg; }
+function saveLocal() { try { localStorage.setItem("reading-tracker-done", JSON.stringify(done)); } catch (e) {} }
+function loadLocal() { try { const v = localStorage.getItem("reading-tracker-done"); if (v) done = JSON.parse(v) || {}; } catch (e) {} }
+
+let writing = Promise.resolve();
+function toggle(id, val) {
+  if (val) done[id] = true; else delete done[id];
+  render();
+  if (ref) {
+    const snapshot = { ...done };
+    writing = writing.then(() => ref.set({ done: snapshot, updatedAt: Date.now() }))
+      .then(() => setSync("Saved. Progress syncs across your devices."))
+      .catch(() => { saveLocal(); setSync("Couldn't save to your account just now; kept on this device."); });
+  } else { saveLocal(); setSync("Saved in this browser."); }
+}
+
+renderBooks();
+loadLocal();
+render();
+
+setSync("Progress is saved in this browser.");
+</script>
+
+</body></html>

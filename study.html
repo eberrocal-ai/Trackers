@@ -1,0 +1,375 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><title>Eduardo's Study Tracker</title></head><body>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one reading column; summary bars up top, then three phases of collapsible week cards, current week opened. */
+:root {
+  --bg: #f3f5f7;
+  --surface: #ffffff;
+  --fg: #17212b;
+  --muted: #5b6875;
+  --line: #d9e0e6;
+  --accent: #1f6f8b;
+  --t-cissp: #2f7d4f;
+  --t-claude: #b8582f;
+  --t-tl: #2a62b8;
+  --t-speak: #7a4a9a;
+  --good: #2f7d4f;
+  --chip: #e8edf1;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11171d; --surface: #18212a; --fg: #e6ecf1; --muted: #98a6b3; --line: #2a3640;
+    --accent: #5fb3d1; --t-cissp: #5cc285; --t-claude: #e48a62; --t-tl: #6c9cf0; --t-speak: #b78ad6;
+    --good: #5cc285; --chip: #22303b; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11171d; --surface: #18212a; --fg: #e6ecf1; --muted: #98a6b3; --line: #2a3640;
+  --accent: #5fb3d1; --t-cissp: #5cc285; --t-claude: #e48a62; --t-tl: #6c9cf0; --t-speak: #b78ad6;
+  --good: #5cc285; --chip: #22303b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+h1 { font-size: 2.1rem; font-weight: 700; letter-spacing: -0.01em; }
+.sub { color: var(--muted); margin: 6px 0 0; max-width: 62ch; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.summary { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 16px; }
+.overall { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; }
+.overall .big { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; }
+.tracks { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.track { display: grid; gap: 6px; min-width: 0; }
+.track-head { display: flex; justify-content: space-between; gap: 8px; font-size: 0.88rem; }
+.track-head b { font-weight: 600; }
+.bar { height: 8px; background: var(--chip); border-radius: 99px; overflow: hidden; }
+.bar > span { display: block; height: 100%; width: 0; border-radius: 99px; transition: width .3s ease; }
+.sync { font-size: 0.8rem; color: var(--muted); }
+
+.phase { display: grid; gap: 10px; }
+.phase-head { display: grid; gap: 4px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.phase-head h2 { font-size: 1.35rem; font-weight: 600; }
+.phase-head p { margin: 0; color: var(--muted); font-size: 0.92rem; max-width: 70ch; }
+
+details.week { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+details.week.current { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+summary::-webkit-details-marker { display: none; }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+.wk-num { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); width: 3.2em; }
+.wk-title { min-width: 0; }
+.wk-title h3 { font-size: 1.05rem; font-weight: 600; }
+.wk-title .dates { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+.wk-right { display: flex; align-items: center; gap: 10px; }
+.pill { font-family: var(--font-mono); font-size: 0.72rem; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+.pill.now { background: var(--accent); color: var(--surface); }
+.pill.done { background: var(--good); color: var(--surface); }
+.chev { width: 10px; height: 10px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .2s; margin-top: -4px; }
+details[open] .chev { transform: rotate(-135deg); margin-top: 4px; }
+
+.items { list-style: none; margin: 0; padding: 0 16px 14px; display: grid; gap: 2px; }
+.items li label { display: grid; grid-template-columns: 20px auto 1fr; gap: 10px; align-items: start; padding: 8px 6px; border-radius: 6px; cursor: pointer; }
+.items li label:hover { background: var(--chip); }
+.items input { width: 17px; height: 17px; margin: 2px 0 0; accent-color: var(--accent); }
+.tag { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; border: 1px solid currentColor; white-space: nowrap; margin-top: 1px; }
+.tag.cissp { color: var(--t-cissp); } .tag.claude { color: var(--t-claude); } .tag.tl { color: var(--t-tl); } .tag.speak { color: var(--t-speak); }
+.txt { min-width: 0; }
+.checked .txt { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+.wk-note { margin: 0 16px 14px; padding: 10px 12px; border-left: 3px solid var(--line); color: var(--muted); font-size: 0.88rem; }
+
+.howto { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.howto h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; }
+.howto ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; max-width: 70ch; }
+@media (max-width: 520px) {
+  summary { grid-template-columns: 1fr auto; }
+  .wk-num { display: none; }
+  .items li label { grid-template-columns: 20px 1fr; }
+  .items li label .tag { grid-column: 2; justify-self: start; }
+  .items li label .txt { grid-column: 2; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Oct 12, 2026 → Feb 28, 2027 · 20 weeks</div>
+    <h1>Eduardo's Study Tracker</h1>
+    <p class="sub">Quick wins first (Claude Certified Associate and ThreatLocker Cyber Hero), then CISSP domain by domain. Public speaking runs the whole way, practiced by teaching what you're studying out loud.</p>
+    <p class="sub"><a href="reading.html" style="color:var(--accent)">Reading tracker &rarr;</a></p>
+  </header>
+
+  <section class="summary" aria-label="Progress">
+    <div class="overall">
+      <div><div class="eyebrow">Overall</div><div class="big mono" id="overallPct">0%</div></div>
+      <div class="mono" id="overallCount" style="color:var(--muted)">0 of 0 tasks</div>
+    </div>
+    <div class="bar"><span id="overallBar" style="background:var(--accent)"></span></div>
+    <div class="tracks" id="tracks"></div>
+    <div class="sync" id="sync">Loading saved progress…</div>
+  </section>
+
+  <section class="howto" aria-label="Weekly rhythm">
+    <h2>Weekly rhythm</h2>
+    <ul>
+      <li><b>CISSP (Phase 2+):</b> 45–60 min, 5 days a week. Read the OSG 10th Edition chapters, write notes in the Leuchtturm, then 15–20 practice questions.</li>
+      <li><b>Speaking:</b> one course lesson plus one recorded practice each week. Rewatch once and write down one thing to fix.</li>
+      <li><b>Claude as tutor:</b> paste your notes and ask it to quiz you, or to argue the "think like a manager" answer.</li>
+      <li><b>Behind?</b> Weeks 7 and 11 are deliberately light. Use them to catch up rather than shifting everything.</li>
+    </ul>
+  </section>
+
+  <div id="plan" style="display:grid;gap:28px"></div>
+</div>
+
+<script>
+const TRACKS = {
+  cissp: { name: "CISSP", color: "var(--t-cissp)" },
+  claude: { name: "Claude Associate", color: "var(--t-claude)" },
+  tl: { name: "ThreatLocker", color: "var(--t-tl)" },
+  speak: { name: "Public speaking", color: "var(--t-speak)" },
+};
+
+const PHASES = [
+  { title: "Phase 1 · Quick wins", blurb: "Finish Claude Certified Associate – Foundations and ThreatLocker University while starting the speaking course. CISSP stays parked except for a short weekly warm-up.", weeks: [
+    { start: "2026-10-12", title: "Set up and baseline", items: [
+      ["claude", "Read the CCAO-F exam guide and its 7 domains; confirm how you'll register (see note)"],
+      ["claude", "Take one practice test cold to get a baseline score"],
+      ["tl", "Create your ThreatLocker University account and self-enroll in the Certified Cyber Hero Learning Plan"],
+      ["tl", "Complete the first modules (platform overview, Application Allowlisting)"],
+      ["speak", "Commanding Presence: first lesson(s)"],
+      ["speak", "Record a 2-minute self-introduction as your baseline video"],
+    ], note: "The Associate exam is currently limited to people affiliated with Claude Partner Network organizations. Check eligibility this week. If you can't register yet, still finish the prep and treat it as Claude skills practice." },
+    { start: "2026-10-19", title: "Core content", items: [
+      ["claude", "Study Output Evaluation & Validation (largest domain, 21%) and Workflow Integration (16%)"],
+      ["claude", "Build a real Claude Project for your job search with instructions and knowledge files"],
+      ["tl", "Ringfencing, Elevation, and Storage Control modules"],
+      ["tl", "Try the concepts against your Windows Server lab and note what you'd configure"],
+      ["speak", "Commanding Presence: next lesson(s)"],
+      ["speak", "Record a 3-minute explainer: \"What is application allowlisting and why it stops ransomware\""],
+    ]},
+    { start: "2026-10-26", title: "Finish and test", items: [
+      ["claude", "Model selection, product features, responsible use and data sensitivity"],
+      ["claude", "Full timed practice test (60 questions, 120 min); review every miss"],
+      ["tl", "Finish remaining Learning Plan modules (Network Control, Ops/Detect, etc.)"],
+      ["tl", "Take the Cyber Hero exam (you get two free attempts)"],
+      ["speak", "Commanding Presence: next lesson(s)"],
+      ["cissp", "Warm-up: read the CISSP exam outline and skim the OSG table of contents"],
+    ]},
+    { start: "2026-11-02", title: "Exam week and CISSP kickoff", items: [
+      ["claude", "Sit the Claude Certified Associate exam (if eligible), or do a final practice test"],
+      ["tl", "Retake Cyber Hero if needed; add both credentials to LinkedIn and your resume"],
+      ["cissp", "Book your CISSP exam for late Feb / early March 2027"],
+      ["cissp", "Take the OSG assessment test as a baseline"],
+      ["speak", "Record a 2-minute talk on what you learned from the two courses (good interview practice)"],
+    ]},
+  ]},
+  { title: "Phase 2 · CISSP domains", blurb: "One domain at a time from the OSG 10th Edition. Each week ends with a 5-minute recorded explainer of that domain, aimed at an executive audience.", weeks: [
+    { start: "2026-11-09", title: "Domain 1 (part 1): Security & Risk Management", items: [
+      ["cissp", "Read: security governance, CIA, due care/due diligence, risk management"],
+      ["cissp", "Notes + practice questions for this week's chapters"],
+      ["speak", "Commanding Presence: next lesson(s)"],
+      ["speak", "Record: explain quantitative vs qualitative risk to a CFO (5 min)"],
+    ]},
+    { start: "2026-11-16", title: "Domain 1 (part 2): BCP, law & ethics", items: [
+      ["cissp", "Read: business continuity, laws/regulations, ISC2 Code of Ethics"],
+      ["cissp", "Domain 1 end-of-chapter questions; log weak spots"],
+      ["claude", "Have Claude quiz you on Domain 1 with scenario questions"],
+      ["speak", "Record: walk through a BCP for a 60-user company (5 min)"],
+    ]},
+    { start: "2026-11-23", title: "Domain 2: Asset Security (light week)", items: [
+      ["cissp", "Read: data classification, ownership roles, data states, retention"],
+      ["cissp", "Practice questions for Domain 2"],
+      ["speak", "Commanding Presence: next lesson(s)"],
+    ], note: "Thanksgiving week. Lighter on purpose; use any spare time to catch up." },
+    { start: "2026-11-30", title: "Domain 3 (part 1): Architecture & cryptography", items: [
+      ["cissp", "Read: security models (Bell-LaPadula, Biba, etc.), symmetric/asymmetric crypto, PKI"],
+      ["cissp", "Notes + practice questions"],
+      ["speak", "Record: explain PKI without jargon (5 min)"],
+    ]},
+    { start: "2026-12-07", title: "Domain 3 (part 2): Secure design & physical security", items: [
+      ["cissp", "Read: secure design principles, vulnerabilities in systems, physical/site security"],
+      ["tl", "Tie-in: map Zero Trust / allowlisting to Domain 3 secure design principles"],
+      ["cissp", "Domain 3 practice questions; log weak spots"],
+      ["speak", "Commanding Presence: next lesson(s)"],
+    ]},
+    { start: "2026-12-14", title: "Domain 4: Network Security", items: [
+      ["cissp", "Read: OSI/TCP-IP, secure protocols, network components, secure channels"],
+      ["cissp", "Notes + practice questions"],
+      ["speak", "Record: explain network segmentation to a non-technical manager (5 min)"],
+    ]},
+    { start: "2026-12-21", title: "Review week (holidays)", items: [
+      ["cissp", "Re-read your notes for Domains 1–4"],
+      ["cissp", "100-question mixed quiz across Domains 1–4"],
+      ["speak", "Commanding Presence: next lesson(s)"],
+    ], note: "Holiday week. Review only, no new material." },
+    { start: "2026-12-28", title: "Domain 5: Identity & Access Management", items: [
+      ["cissp", "Read: identification/authentication, federation, access control models, provisioning"],
+      ["cissp", "Notes + practice questions"],
+      ["speak", "Record: explain MFA and conditional access to an exec team (5 min)"],
+    ]},
+    { start: "2027-01-04", title: "Domain 6: Security Assessment & Testing", items: [
+      ["cissp", "Read: audits, vulnerability scans, pen tests, log reviews, metrics"],
+      ["cissp", "Notes + practice questions"],
+      ["speak", "Commanding Presence: next lesson(s)"],
+    ]},
+    { start: "2027-01-11", title: "Domain 7 (part 1): Security Operations", items: [
+      ["cissp", "Read: investigations, logging/monitoring, configuration and patch management"],
+      ["tl", "Tie-in: where ThreatLocker fits in Domain 7 controls (allowlisting, ringfencing, storage)"],
+      ["cissp", "Notes + practice questions"],
+    ]},
+    { start: "2027-01-18", title: "Domain 7 (part 2): Incident response & recovery", items: [
+      ["cissp", "Read: incident management, DR strategies, backups, BCP testing"],
+      ["cissp", "Domain 7 practice questions; log weak spots"],
+      ["speak", "Record: brief leadership on a ransomware incident (5 min)"],
+    ]},
+    { start: "2027-01-25", title: "Domain 8: Software Development Security", items: [
+      ["cissp", "Read: SDLC, secure coding, software risks, acquired software"],
+      ["cissp", "Notes + practice questions"],
+      ["speak", "Commanding Presence: finish remaining lessons"],
+    ]},
+  ]},
+  { title: "Phase 3 · CISSP exam readiness", blurb: "Practice exams only. Spend most of the time reviewing why each wrong answer was wrong.", weeks: [
+    { start: "2027-02-01", title: "Full practice exam #1", items: [
+      ["cissp", "Full-length practice exam under timed conditions"],
+      ["cissp", "Review every miss; rank domains weakest to strongest"],
+    ]},
+    { start: "2027-02-08", title: "Weak domains", items: [
+      ["cissp", "Re-study your two weakest domains"],
+      ["claude", "Have Claude drill you on \"think like a manager\" scenarios"],
+      ["cissp", "Full practice exam #2"],
+    ]},
+    { start: "2027-02-15", title: "Final practice", items: [
+      ["cissp", "Full practice exam #3"],
+      ["speak", "Record a 10-minute overview of all 8 domains (final speaking capstone)"],
+    ]},
+    { start: "2027-02-22", title: "Exam week", items: [
+      ["cissp", "Light review of notes only; rest the day before"],
+      ["cissp", "Sit the CISSP exam"],
+    ]},
+  ]},
+];
+
+// Build flat list with stable ids
+let wkNo = 0;
+const ALL = [];
+for (const ph of PHASES) for (const w of ph.weeks) {
+  w.no = ++wkNo;
+  w.items = w.items.map((it, i) => ({ id: `w${w.no}-${i}`, track: it[0], text: it[1] }));
+  ALL.push(...w.items);
+}
+
+let done = {};
+let db = null, ref = null;
+
+function fmt(d) { return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }); }
+function weekRange(start) {
+  const s = new Date(start + "T00:00:00"); const e = new Date(s); e.setDate(s.getDate() + 6);
+  return `${fmt(s)} – ${fmt(e)}`;
+}
+function isCurrent(start) {
+  const s = new Date(start + "T00:00:00"); const e = new Date(s); e.setDate(s.getDate() + 7);
+  const now = new Date(); return now >= s && now < e;
+}
+
+function render() {
+  const plan = document.getElementById("plan");
+  const openIds = new Set([...plan.querySelectorAll("details[open]")].map(d => d.id));
+  const first = !plan.children.length;
+  plan.innerHTML = "";
+  let anyCurrent = false;
+  for (const ph of PHASES) {
+    const sec = document.createElement("section"); sec.className = "phase";
+    const head = document.createElement("div"); head.className = "phase-head";
+    const h2 = document.createElement("h2"); h2.textContent = ph.title;
+    const p = document.createElement("p"); p.textContent = ph.blurb;
+    head.append(h2, p); sec.append(head);
+    for (const w of ph.weeks) {
+      const d = document.createElement("details"); d.className = "week"; d.id = "wk" + w.no;
+      const cur = isCurrent(w.start); if (cur) { d.classList.add("current"); anyCurrent = true; }
+      const nDone = w.items.filter(i => done[i.id]).length;
+      if (first ? cur : openIds.has(d.id)) d.open = true;
+      const s = document.createElement("summary");
+      const num = document.createElement("div"); num.className = "wk-num"; num.textContent = "WK " + String(w.no).padStart(2, "0");
+      const t = document.createElement("div"); t.className = "wk-title";
+      const h3 = document.createElement("h3"); h3.textContent = w.title;
+      const dt = document.createElement("div"); dt.className = "dates"; dt.textContent = weekRange(w.start);
+      t.append(h3, dt);
+      const r = document.createElement("div"); r.className = "wk-right";
+      const pill = document.createElement("span"); pill.className = "pill";
+      if (nDone === w.items.length) { pill.classList.add("done"); pill.textContent = "Done"; }
+      else if (cur) { pill.classList.add("now"); pill.textContent = `This week · ${nDone}/${w.items.length}`; }
+      else pill.textContent = `${nDone}/${w.items.length}`;
+      const ch = document.createElement("span"); ch.className = "chev";
+      r.append(pill, ch); s.append(num, t, r); d.append(s);
+      const ul = document.createElement("ul"); ul.className = "items";
+      for (const it of w.items) {
+        const li = document.createElement("li"); if (done[it.id]) li.className = "checked";
+        const lab = document.createElement("label");
+        const cb = document.createElement("input"); cb.type = "checkbox"; cb.id = it.id; cb.checked = !!done[it.id];
+        cb.addEventListener("change", () => toggle(it.id, cb.checked));
+        const tag = document.createElement("span"); tag.className = "tag " + it.track; tag.textContent = TRACKS[it.track].name;
+        const tx = document.createElement("span"); tx.className = "txt"; tx.textContent = it.text;
+        lab.append(cb, tag, tx); li.append(lab); ul.append(li);
+      }
+      d.append(ul);
+      if (w.note) { const n = document.createElement("p"); n.className = "wk-note"; n.textContent = w.note; d.append(n); }
+      sec.append(d);
+    }
+    plan.append(sec);
+  }
+  if (first && !anyCurrent) { const f = document.getElementById("wk1"); if (f) f.open = true; }
+  renderSummary();
+}
+
+function renderSummary() {
+  const total = ALL.length, n = ALL.filter(i => done[i.id]).length;
+  const pct = total ? Math.round(n / total * 100) : 0;
+  document.getElementById("overallPct").textContent = pct + "%";
+  document.getElementById("overallCount").textContent = `${n} of ${total} tasks`;
+  document.getElementById("overallBar").style.width = pct + "%";
+  const box = document.getElementById("tracks"); box.innerHTML = "";
+  for (const [k, t] of Object.entries(TRACKS)) {
+    const items = ALL.filter(i => i.track === k); const c = items.filter(i => done[i.id]).length;
+    const p = items.length ? Math.round(c / items.length * 100) : 0;
+    const el = document.createElement("div"); el.className = "track";
+    const h = document.createElement("div"); h.className = "track-head";
+    const b = document.createElement("b"); b.textContent = t.name; b.style.color = t.color;
+    const m = document.createElement("span"); m.className = "mono"; m.textContent = `${c}/${items.length}`;
+    h.append(b, m);
+    const bar = document.createElement("div"); bar.className = "bar";
+    const sp = document.createElement("span"); sp.style.width = p + "%"; sp.style.background = t.color;
+    bar.append(sp); el.append(h, bar); box.append(el);
+  }
+}
+
+function setSync(msg) { document.getElementById("sync").textContent = msg; }
+
+function saveLocal() { try { localStorage.setItem("study-tracker-done", JSON.stringify(done)); } catch (e) {} }
+function loadLocal() { try { const v = localStorage.getItem("study-tracker-done"); if (v) done = JSON.parse(v) || {}; } catch (e) {} }
+
+let writing = Promise.resolve();
+function toggle(id, val) {
+  if (val) done[id] = true; else delete done[id];
+  render();
+  if (ref) {
+    const snapshot = { ...done };
+    writing = writing.then(() => ref.set({ done: snapshot, updatedAt: Date.now() }))
+      .then(() => setSync("Saved. Progress syncs across your devices."))
+      .catch(() => { saveLocal(); setSync("Couldn't save to your account just now; kept on this device."); });
+  } else { saveLocal(); setSync("Saved in this browser."); }
+}
+
+loadLocal();
+render();
+
+setSync("Progress is saved in this browser.");
+</script>
+
+</body></html>
